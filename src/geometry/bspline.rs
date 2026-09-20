@@ -21,15 +21,14 @@ impl BSpline {
 
     #[inline]
     pub fn from_points(points: Vec<Point>, degree: usize) -> Self {
-        let n = points.len() - 1;
-        let mut knots = Vec::with_capacity(n + degree + 2);
-        
+        let m = points.len();
+        let mut knots = Vec::with_capacity(m + degree + 1);
+
         for _ in 0..=degree {
             knots.push(0.0);
         }
-        for i in 1..n - degree {
-            let t = i as f64 / (n - degree + 1) as f64;
-            knots.push(t);
+        for i in 1..(m - degree) {
+            knots.push(i as f64 / (m - degree) as f64);
         }
         for _ in 0..=degree {
             knots.push(1.0);
@@ -80,12 +79,15 @@ impl BSpline {
     #[inline]
     fn evaluate_point(&self, t: f64) -> Point {
         let t = t.clamp(0.0, 1.0);
+        if t >= 1.0 {
+            return *self.control_points.last().unwrap_or(&Point::origin());
+        }
         let basis = self.compute_basis_functions(t);
-        
+
         let mut x = 0.0;
         let mut y = 0.0;
         let mut z = 0.0;
-        
+
         for (i, &b) in basis.iter().enumerate() {
             if b > 0.0 {
                 x += self.control_points[i].x * b;
@@ -93,15 +95,16 @@ impl BSpline {
                 z += self.control_points[i].z * b;
             }
         }
-        
+
         Point::new(x, y, z)
     }
 
     fn compute_basis_functions(&self, t: f64) -> Vec<f64> {
         let n = self.control_points.len();
+        let p = self.degree;
         let mut basis = vec![0.0; n];
-        
-        if self.degree == 0 {
+
+        if p == 0 {
             for i in 0..n {
                 if t >= self.knots[i] && t < self.knots[i + 1] {
                     basis[i] = 1.0;
@@ -110,22 +113,22 @@ impl BSpline {
             return basis;
         }
 
-        let mut ndu = vec![vec![0.0; self.degree + 1]; n];
-        for i in 0..n {
+        let mut ndu = vec![vec![0.0; p + 1]; n + 1];
+        for i in 0..=n {
             ndu[i][0] = if t >= self.knots[i] && t < self.knots[i + 1] { 1.0 } else { 0.0 };
         }
 
-        for j in 1..=self.degree {
-            for i in 0..=n - j - 1 {
+        for j in 1..=p {
+            for i in 0..n {
                 let mut saved = 0.0;
-                let denom1 = self.knots[i + j - 1] - self.knots[i];
-                let denom2 = self.knots[i + j] - self.knots[i + 1];
-                
+                let denom1 = self.knots[i + j] - self.knots[i];
+                let denom2 = self.knots[i + j + 1] - self.knots[i + 1];
+
                 if denom1 != 0.0 {
                     saved = ((t - self.knots[i]) / denom1) * ndu[i][j - 1];
                 }
                 if denom2 != 0.0 {
-                    ndu[i][j] = ((self.knots[i + j] - t) / denom2) * ndu[i + 1][j - 1] + saved;
+                    ndu[i][j] = ((self.knots[i + j + 1] - t) / denom2) * ndu[i + 1][j - 1] + saved;
                 } else {
                     ndu[i][j] = saved;
                 }
@@ -133,7 +136,7 @@ impl BSpline {
         }
 
         for i in 0..n {
-            basis[i] = ndu[i][self.degree];
+            basis[i] = ndu[i][p];
         }
 
         basis

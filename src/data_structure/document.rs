@@ -269,6 +269,7 @@ impl Document {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::data_structure::{EntityType, EntityGeometry};
 
     #[test]
     fn test_document_creation() {

@@ -60,9 +60,13 @@ impl Line {
 
     #[inline]
     pub fn closest_point(&self, p: &Point) -> Point {
-        let dir = self.direction();
+        let d = self.end.to_vector2() - self.start.to_vector2();
         let to_point = p.to_vector2() - self.start.to_vector2();
-        let t = to_point.dot(&dir).clamp(0.0, 1.0);
+        let len_sq = d.dot(&d);
+        if len_sq < 1e-30 {
+            return self.start;
+        }
+        let t = (to_point.dot(&d) / len_sq).clamp(0.0, 1.0);
         self.point_at_parameter(t)
     }
 

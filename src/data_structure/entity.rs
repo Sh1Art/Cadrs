@@ -308,8 +308,8 @@ mod tests {
     #[test]
     fn test_entity_properties() {
         let point = Point::origin();
-        let entity = Entity::new(EntityType::Point, EntityGeometry::Point(point));
-        
+        let mut entity = Entity::new(EntityType::Point, EntityGeometry::Point(point));
+
         entity.set_property("color".to_string(), "red".to_string());
         assert_eq!(entity.get_property("color"), Some(&"red".to_string()));
     }
